@@ -1,0 +1,7 @@
+{
+  "name": "cache-tax",
+  "version": "0.1.0",
+  "author": { "name": "gauravruhela07" },
+  "description": "How well the prompt cache works and what the cache tax costs: hit %, cost and the money paid above all-cache-read, per turn, with cache-bust alerts.",
+  "types": "./types/index.d.ts"
+}

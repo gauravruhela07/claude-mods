@@ -1,0 +1,7 @@
+{
+  "name": "reflect",
+  "version": "0.1.0",
+  "author": { "name": "gauravruhela07" },
+  "description": "/reflect: Claude critiques its own recent work (what may be wrong or missed, what to check next) in a pane, with one press to hand the follow-ups back.",
+  "types": "./types/index.d.ts"
+}

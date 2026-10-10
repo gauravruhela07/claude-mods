@@ -1,0 +1,14 @@
+{
+  "name": "claude-mods",
+  "owner": { "name": "gauravruhela07" },
+  "description": "Seven Claude Code mods: savvy-progress, skins, filetree, cache-tax, blast-radius, reflect, replay-theatre.",
+  "plugins": [
+    { "name": "savvy-progress", "source": "./savvy-progress" },
+    { "name": "skins", "source": "./skins" },
+    { "name": "filetree", "source": "./filetree" },
+    { "name": "cache-tax", "source": "./cache-tax" },
+    { "name": "blast-radius", "source": "./blast-radius" },
+    { "name": "reflect", "source": "./reflect" },
+    { "name": "replay-theatre", "source": "./replay-theatre" }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "name": "skins",
+  "version": "0.1.0",
+  "author": { "name": "gauravruhela07" },
+  "description": "Skins for Claude Code: /skin swaps the spinner's glyphs, verbs and color, the turn's closing line and the prompt hints.",
+  "types": "./types/index.d.ts"
+}

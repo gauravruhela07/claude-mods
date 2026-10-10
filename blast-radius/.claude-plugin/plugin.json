@@ -1,0 +1,7 @@
+{
+  "name": "blast-radius",
+  "version": "0.1.0",
+  "author": { "name": "gauravruhela07" },
+  "description": "Shows how far each change can reach: the files that depend on every file Claude edits, and a flag on wide-reaching shell commands. Show only, never blocks.",
+  "types": "./types/index.d.ts"
+}

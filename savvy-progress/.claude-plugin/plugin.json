@@ -1,0 +1,7 @@
+{
+  "name": "savvy-progress",
+  "version": "0.1.0",
+  "author": { "name": "gauravruhela07" },
+  "description": "A live progress band above the prompt: what Claude does now, time, steps, files, errors, and a task bar with a time-left guess.",
+  "types": "./types/index.d.ts"
+}

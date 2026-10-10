@@ -1,0 +1,7 @@
+{
+  "name": "replay-theatre",
+  "version": "0.1.0",
+  "author": { "name": "gauravruhela07" },
+  "description": "Records what Claude does in the session and plays it back like a film in a pane: scene by scene, step by step.",
+  "types": "./types/index.d.ts"
+}

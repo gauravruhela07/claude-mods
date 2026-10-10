@@ -1,0 +1,7 @@
+{
+  "name": "filetree",
+  "version": "0.1.0",
+  "author": { "name": "gauravruhela07" },
+  "description": "A live file-tree pane of the project that marks the files Claude read, changed or created this session.",
+  "types": "./types/index.d.ts"
+}
