@@ -4,7 +4,7 @@ Seven mods for [Claude Code](https://claude.com/claude-code). Each one is a plug
 
 | Mod | What it does | How to use it |
 | --- | --- | --- |
-| **savvy-progress** | A live band above the prompt while Claude works: what it is doing now ("Reading format.ts · 4s"), elapsed time, steps, files read and changed, errors, and a task bar with a time-left guess. A one-line summary after each turn. | Shows by itself. `/savvy-progress [on\|off]` |
+| **savvy-progress** | A live band above the prompt while Claude works: what it is doing now ("Reading format.ts · 4s"), elapsed time, steps, files read and changed, errors, and a progress bar: the real task list when Claude keeps one, otherwise a time bar guessed from how long your past turns took (clearly labelled a guess). A one-line summary after each turn. | Shows by itself. `/savvy-progress [on\|off]` |
 | **skins** | Re-skins the spinner (glyphs, verbs, color), the turn's closing line and the prompt hints. Skins: `matrix`, `pirate`, `zen`, `retro`, `space`. Your choice is remembered. | `/skin` (picker), `/skin matrix`, `/skin off` |
 | **filetree** | A live file-tree pane of the project. Marks the files Claude read (`R`), changed (`M`) and created (`A`) this session, and opens the folders they live in. | `/filetree`, `/filetree touched`, `/filetree all`, `/filetree close` |
 | **cache-tax** | How well the prompt cache works, and the "tax": the money paid above the ideal where every input token is a cache read. Status line `cache 94% · tax $0.12`, a per-turn table, and a toast with the likely cause when the cache busts. | `/cache-tax`, `/cache-tax reset` |

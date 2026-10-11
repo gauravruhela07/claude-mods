@@ -2,19 +2,21 @@ import { atom, read, update } from 'claude-code'
 import type { Register } from 'claude-code'
 
 import type { Task } from '../types'
-import { bar, clip, describe, duration, isPlanTool, plural, replan, started } from './format'
+import { bar, clip, describe, duration, guess, isPlanTool, plural, remember, replan, savedDurations, started } from './format'
 
 const live = atom({ plugin: 'savvy-progress', key: 'live' } as const, null)
 const tasks = atom({ plugin: 'savvy-progress', key: 'tasks' } as const, [])
 const now = atom({ plugin: 'savvy-progress', key: 'now' } as const, 0)
 const last = atom({ plugin: 'savvy-progress', key: 'last' } as const, null)
 const isHidden = atom({ plugin: 'savvy-progress', key: 'isHidden' } as const, false)
+const durations = atom({ plugin: 'savvy-progress', key: 'durations' } as const, [])
 
 const SPINNER = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
 const SLOW_MS = 30_000
 const LONG_TURN_MS = 60_000
 
 const isDone = (task: Task) => task.status === 'completed'
+const barWidth = (width: number) => Math.min(20, Math.max(8, Math.floor(width / 5)))
 
 export const register: Register = on => {
   // The 1s tick only writes while a turn runs; a reload resets it, and the next tool call sets it again.
@@ -27,6 +29,8 @@ export const register: Register = on => {
       argumentHint: '[on|off]',
       immediate: true,
     })
+    const saved = savedDurations(await $.store.get('durations').catch(() => undefined))
+    await update($, durations, () => saved)
     $.clock.every(1000, async () => {
       if (!isTicking) return
       const t = await $.clock.now()
@@ -118,6 +122,11 @@ export const register: Register = on => {
         errors: turn.errors,
         isAborted: e.isAborted,
       }))
+      if (e.reason === 'answer' && !e.isAborted) {
+        const list = remember(await read($, durations), e.durationMs)
+        await update($, durations, () => list)
+        await $.store.set('durations', list).catch(() => undefined)
+      }
       if (e.durationMs >= LONG_TURN_MS && !e.isAborted) {
         $.ui.toast(`Done in ${duration(e.durationMs)} · ${plural(turn.steps, 'step')}`)
       }
@@ -135,6 +144,7 @@ export const register: Register = on => {
     const plan = await read($, tasks)
     const done = await read($, last)
     const t = await read($, now)
+    const history = await read($, durations)
     const isPlanOpen = plan.length > 0 && !plan.every(isDone)
 
     if (turn === null && !isPlanOpen && done === null) return next(e)
@@ -174,6 +184,23 @@ export const register: Register = on => {
           {turn.errors > 0 && <Text color="error"> · {plural(turn.errors, 'error')}</Text>}
         </Box>,
       )
+
+      // No task list to count: a bar from how long past turns took, said to be a guess.
+      if (!isPlanOpen) {
+        const est = guess(history, elapsed)
+        const percent = Math.min(97, Math.floor((elapsed / Math.max(1, est.totalMs)) * 100))
+        const head = `${bar(percent, 100, barWidth(width))} ${percent}%`
+        const left = est.isLonger ? 'longer than usual' : `~${duration(est.totalMs - elapsed)} left`
+        const basis = est.isLearning ? ' · a guess, still learning your turns' : ` · a guess from your last ${plural(history.length, 'turn')}`
+
+        rows.push(
+          <Box key="guess" flexDirection="row">
+            <Text color={est.isLonger ? 'warning' : 'claude'}>{head}</Text>
+            <Text> {left}</Text>
+            <Text dimColor>{clip(basis, Math.max(0, width - head.length - left.length - 1))}</Text>
+          </Box>,
+        )
+      }
     }
 
     if (isPlanOpen) {
@@ -186,8 +213,7 @@ export const register: Register = on => {
         turn !== null && doneNow > 0 && left > 0
           ? ` · ~${duration(((t - turn.startedAt) / doneNow) * left)} left`
           : ''
-      const width2 = Math.min(20, Math.max(8, Math.floor(width / 5)))
-      const head = `${bar(finished, total, width2)} ${finished}/${total}`
+      const head = `${bar(finished, total, barWidth(width))} ${finished}/${total}`
       const what = doing === undefined ? '' : doing.activeForm || doing.subject
 
       rows.push(

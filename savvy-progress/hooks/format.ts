@@ -48,6 +48,34 @@ export const bar = (done: number, total: number, width: number): string => {
   return '█'.repeat(filled) + '░'.repeat(width - filled)
 }
 
+const HISTORY = 30
+const MIN_SAMPLES = 3
+const FIRST_GUESS_MS = 60_000
+
+/** The durations kept after one more answered turn: the newest `HISTORY`. */
+export const remember = (durations: number[], ms: number): number[] => [...durations, ms].slice(-HISTORY)
+
+/** Reads saved durations back, dropping anything that is not a positive number. */
+export const savedDurations = (value: unknown): number[] =>
+  Array.isArray(value) ? value.filter((ms): ms is number => typeof ms === 'number' && ms > 0).slice(-HISTORY) : []
+
+export type Guess = { totalMs: number; isLonger: boolean; isLearning: boolean }
+
+/**
+ * How long this turn will take in all, from how long past turns took. Among the past turns that
+ * ran longer than this one has so far, it takes the middle one, so a turn already 3 minutes in is
+ * compared with long turns, not quick ones. Past every turn on record, it is "longer than usual".
+ */
+export const guess = (durations: number[], elapsedMs: number): Guess => {
+  const isLearning = durations.length < MIN_SAMPLES
+  const longer = (isLearning ? [FIRST_GUESS_MS] : durations).filter(ms => ms > elapsedMs).sort((a, b) => a - b)
+  const middle = longer[Math.floor(longer.length / 2)]
+
+  return middle === undefined
+    ? { totalMs: elapsedMs * 1.25, isLonger: true, isLearning }
+    : { totalMs: middle, isLonger: false, isLearning }
+}
+
 /** Turns a tool call into a short line a person reads: "Reading register.tsx". */
 export const describe = (tool: string, input: Input): string => {
   const file = base(str(input, 'file_path') || str(input, 'notebook_path') || str(input, 'path'))

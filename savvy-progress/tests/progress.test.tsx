@@ -105,3 +105,63 @@ test('the command takes on, off, or nothing, and ignores other words', async $ =
   expect((await $.command.run(run('on'))).text).toContain('shown')
   expect((await $.command.run(run(''))).text).toContain('hidden')
 })
+
+const start = {
+  cwd: '/work',
+  surface: 'terminal',
+  isInteractive: true,
+} as const
+
+test('without a task list, a time bar guesses from past turns', async ($, on) => {
+  const clock = mock.clock(on, { now: 1_000_000 })
+  mock.store(on, { durations: [30_000, 90_000, 120_000, 240_000] })
+  on('session.start', ($, e) => ({ cwd: e.cwd }))
+  on('command.register', ($, e) => ({ value: { command: e.name } }) as never)
+  on('turn.start', ($, e) => ({ turnId: e.turnId }))
+  on('turn.complete', ($, e) => ({ text: e.answer }))
+
+  await $.session.start(start)
+  await $.turn.start({ text: 'go', turnId: 'g1' })
+  await clock.advance(45_000)
+
+  for (const surface of ['terminal', 'desktop'] as const) {
+    const ui = await $.ui.mount(band(surface))
+    const text = (await ui.find({ key: 'guess' }))?.text ?? ''
+    expect(text).toContain('37%')
+    expect(text).toContain('~1m 15s left')
+    expect(text).toContain('last 4 turns')
+    await ui.unmount()
+  }
+
+  await clock.advance(300_000)
+  const late = await $.ui.mount(band('terminal'))
+  expect((await late.find({ key: 'guess' }))?.text).toContain('longer than usual')
+  await late.unmount()
+
+  await $.turn.complete({ answer: 'ok', durationMs: 345_000, isAborted: false, turnId: 'g1', reason: 'answer' })
+  await $.turn.start({ text: 'again', turnId: 'g2' })
+  const next = await $.ui.mount(band('terminal'))
+  expect((await next.find({ key: 'guess' }))?.text).toContain('last 5 turns')
+  await next.unmount()
+})
+
+test('with no past turns the bar says it is still learning', async ($, on) => {
+  mock.clock(on, { now: 0 })
+  on('turn.start', ($, e) => ({ turnId: e.turnId }))
+  await $.turn.start({ text: 'go', turnId: 'n1' })
+  const ui = await $.ui.mount(band('desktop'))
+  expect((await ui.find({ key: 'guess' }))?.text).toContain('still learning')
+  await ui.unmount()
+})
+
+test('a task list replaces the guess with the real task bar', async ($, on) => {
+  mock.clock(on, { now: 0 })
+  on('turn.start', ($, e) => ({ turnId: e.turnId }))
+  on('tool.call', ($, e) => (e.tool === 'TaskCreate' ? { result: { task: { id: '1', subject: e.subject } } } : ({ result: {} } as never)))
+  await $.turn.start({ text: 'go', turnId: 'p1' })
+  await $.tool.call({ tool: 'TaskCreate', subject: 'One', description: 'x' })
+  const ui = await $.ui.mount(band('terminal'))
+  expect(await ui.find({ key: 'guess' })).toBeUndefined()
+  expect((await ui.find({ key: 'tasks' }))?.text).toContain('0/1')
+  await ui.unmount()
+})

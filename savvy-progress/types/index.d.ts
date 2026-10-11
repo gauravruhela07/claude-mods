@@ -37,6 +37,8 @@ declare module 'claude-code' {
       now: number
       last: Summary | null
       isHidden: boolean
+      /** How long past answered turns took, in ms, oldest first; kept across sessions in `$.store`. */
+      durations: number[]
     }
   }
 }
