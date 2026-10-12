@@ -176,51 +176,53 @@ export const register: Register = on => {
       if (turn.files.length > 0) parts.push(`${plural(turn.files.length, 'file')} changed`)
       if (turn.commands > 0) parts.push(plural(turn.commands, 'command'))
       if (turn.agentSteps > 0) parts.push(`${turn.agentSteps} by agents`)
-      const stats = clip(parts.join(' · '), width)
 
-      rows.push(
-        <Box key="stats" flexDirection="row">
-          <Text dimColor>{stats}</Text>
-          {turn.errors > 0 && <Text color="error"> · {plural(turn.errors, 'error')}</Text>}
-        </Box>,
-      )
+      // The bar shares line 2 with the counts: some surfaces show the band only two lines tall.
+      // A task list gives a real bar; without one, a bar from how long past turns took, said to be a guess.
+      let head: string
+      let note: string
+      let color: 'success' | 'claude' | 'warning'
 
-      // No task list to count: a bar from how long past turns took, said to be a guess.
-      if (!isPlanOpen) {
+      if (isPlanOpen) {
+        const total = plan.length
+        const finished = plan.filter(isDone).length
+        const doneNow = finished - turn.tasksDoneAtStart
+        const left = total - finished
+        head = `${bar(finished, total, barWidth(width))} ${finished}/${total}`
+        note = doneNow > 0 && left > 0 ? `~${duration((elapsed / doneNow) * left)} left` : 'tasks'
+        color = 'success'
+      } else {
         const est = guess(history, elapsed)
         const percent = Math.min(97, Math.floor((elapsed / Math.max(1, est.totalMs)) * 100))
-        const head = `${bar(percent, 100, barWidth(width))} ${percent}%`
-        const left = est.isLonger ? 'longer than usual' : `~${duration(est.totalMs - elapsed)} left`
-        const basis = est.isLearning ? ' · a guess, still learning your turns' : ` · a guess from your last ${plural(history.length, 'turn')}`
-
-        rows.push(
-          <Box key="guess" flexDirection="row">
-            <Text color={est.isLonger ? 'warning' : 'claude'}>{head}</Text>
-            <Text> {left}</Text>
-            <Text dimColor>{clip(basis, Math.max(0, width - head.length - left.length - 1))}</Text>
-          </Box>,
-        )
+        head = `${bar(percent, 100, barWidth(width))} ${percent}%`
+        note = est.isLonger
+          ? 'longer than usual'
+          : `~${duration(est.totalMs - elapsed)} left (${est.isLearning ? 'rough guess' : 'guess'})`
+        color = est.isLonger ? 'warning' : 'claude'
       }
-    }
 
-    if (isPlanOpen) {
+      const errors = turn.errors > 0 ? ` · ${plural(turn.errors, 'error')}` : ''
+      const stats = clip(` · ${parts.join(' · ')}`, Math.max(0, width - head.length - note.length - 1 - errors.length))
+
+      rows.push(
+        <Box key="progress" flexDirection="row">
+          <Text color={color}>{head}</Text>
+          <Text> {note}</Text>
+          {stats !== '' && <Text dimColor>{stats}</Text>}
+          {errors !== '' && <Text color="error">{errors}</Text>}
+        </Box>,
+      )
+    } else if (isPlanOpen) {
       const total = plan.length
       const finished = plan.filter(isDone).length
       const doing = plan.find(task => task.status === 'in_progress') ?? plan.find(task => !isDone(task))
-      const doneNow = turn === null ? 0 : finished - turn.tasksDoneAtStart
-      const left = total - finished
-      const eta =
-        turn !== null && doneNow > 0 && left > 0
-          ? ` · ~${duration(((t - turn.startedAt) / doneNow) * left)} left`
-          : ''
       const head = `${bar(finished, total, barWidth(width))} ${finished}/${total}`
       const what = doing === undefined ? '' : doing.activeForm || doing.subject
 
       rows.push(
         <Box key="tasks" flexDirection="row">
           <Text color="success">{head}</Text>
-          <Text> {clip(what, width - head.length - eta.length - 2)}</Text>
-          <Text dimColor>{eta}</Text>
+          <Text> {clip(what, width - head.length - 1)}</Text>
         </Box>,
       )
     }

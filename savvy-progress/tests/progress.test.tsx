@@ -43,12 +43,13 @@ test('shows the live step, counts, task bar and time left', async ($, on) => {
   for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount(band(surface))
     expect((await ui.find({ key: 'now' }))?.text).toContain('Reading format.ts')
-    expect((await ui.find({ key: 'stats' }))?.text).toContain('6 steps')
-    expect((await ui.find({ key: 'stats' }))?.text).toContain('1 file changed')
-    const plan = (await ui.find({ key: 'tasks' }))?.text ?? ''
-    expect(plan).toContain('1/2')
-    expect(plan).toContain('Testing it')
-    expect(plan).toContain('left')
+    const line = (await ui.find({ key: 'progress' }))?.text ?? ''
+    expect(line).toContain('6 steps')
+    expect(line).toContain('1 file changed')
+    expect(line).toContain('1/2')
+    expect(line).toContain('left')
+    expect(line).not.toContain('guess')
+    expect(await ui.findAll({ type: 'Box' })).toHaveLength(3)
     await ui.unmount()
   }
 
@@ -126,31 +127,31 @@ test('without a task list, a time bar guesses from past turns', async ($, on) =>
 
   for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount(band(surface))
-    const text = (await ui.find({ key: 'guess' }))?.text ?? ''
+    const text = (await ui.find({ key: 'progress' }))?.text ?? ''
     expect(text).toContain('37%')
-    expect(text).toContain('~1m 15s left')
-    expect(text).toContain('last 4 turns')
+    expect(text).toContain('~1m 15s left (guess)')
+    expect(text).toContain('45s · 0 steps')
     await ui.unmount()
   }
 
   await clock.advance(300_000)
   const late = await $.ui.mount(band('terminal'))
-  expect((await late.find({ key: 'guess' }))?.text).toContain('longer than usual')
+  expect((await late.find({ key: 'progress' }))?.text).toContain('longer than usual')
   await late.unmount()
 
   await $.turn.complete({ answer: 'ok', durationMs: 345_000, isAborted: false, turnId: 'g1', reason: 'answer' })
   await $.turn.start({ text: 'again', turnId: 'g2' })
   const next = await $.ui.mount(band('terminal'))
-  expect((await next.find({ key: 'guess' }))?.text).toContain('last 5 turns')
+  expect((await next.find({ key: 'progress' }))?.text).toContain('(guess)')
   await next.unmount()
 })
 
-test('with no past turns the bar says it is still learning', async ($, on) => {
+test('with no past turns the bar says it is a rough guess', async ($, on) => {
   mock.clock(on, { now: 0 })
   on('turn.start', ($, e) => ({ turnId: e.turnId }))
   await $.turn.start({ text: 'go', turnId: 'n1' })
   const ui = await $.ui.mount(band('desktop'))
-  expect((await ui.find({ key: 'guess' }))?.text).toContain('still learning')
+  expect((await ui.find({ key: 'progress' }))?.text).toContain('rough guess')
   await ui.unmount()
 })
 
@@ -161,7 +162,8 @@ test('a task list replaces the guess with the real task bar', async ($, on) => {
   await $.turn.start({ text: 'go', turnId: 'p1' })
   await $.tool.call({ tool: 'TaskCreate', subject: 'One', description: 'x' })
   const ui = await $.ui.mount(band('terminal'))
-  expect(await ui.find({ key: 'guess' })).toBeUndefined()
-  expect((await ui.find({ key: 'tasks' }))?.text).toContain('0/1')
+  const line = (await ui.find({ key: 'progress' }))?.text ?? ''
+  expect(line).toContain('0/1')
+  expect(line).not.toContain('guess')
   await ui.unmount()
 })
